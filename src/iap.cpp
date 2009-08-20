@@ -18,7 +18,8 @@
  * KIND, either express or implied.
  *
  ****************************************************************************/
-#include <WProgram.h>
+//#include <WProgram.h>
+#include "podshield.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
@@ -52,6 +53,8 @@ extern void iap_periodic();
 extern int iap_getc(unsigned char c);
 
 unsigned long nextPoll = 0;
+
+
 extern  void head_loop(void)
 {
 	int c;
@@ -62,15 +65,9 @@ extern  void head_loop(void)
 	while ((c = headcomm_in()) >= 0) {
 		iap_getc(c);
 	}
-    //static int count = 0;
 
-    //count += iap_pollspeed;
-    //if (count < (500/10)) return;
-
-    /* exec every 500ms if pollspeed == 1 */
-    //count = 0;
-    //queue_post(&button_queue, SYS_IAP_PERIODIC, 0);
 }
+
 
 extern  void iap_reset() {
     iap_pollspeed = 0;
@@ -328,8 +325,7 @@ void sendSongs(int pl, int start, int cnt) {
     int i;
 	for (i=start;i<start+cnt && i < total;i++) {
 		yield();
-		int maybeArtist;
-    	if ((maybeArtist = getIPodChannel(pl, i, songtitle, false)) < 0) {
+    	if ((getIPodChannel(pl, i, songtitle, false)) < 0) {
     		ipodNakCount();
     		return;
     	}
@@ -338,17 +334,12 @@ void sendSongs(int pl, int start, int cnt) {
         data[5] = (long)i>> 8;
         data[6] = (long)i;
 
-        if (0 && maybeArtist > 1)
-        	getIPodArtist(pl, i, artist, false);
-        else
-        	artist[0] = 0;
-    	if (artist[0] == 0) {
-    		strcpy((char*)&data[7], songtitle);
-    	} else {
-    		sprintf((char*)&data[7], "%s %s", songtitle, artist);
-    	}
+    	strcpy((char*)&data[7], songtitle);
         iap_send_pkt(data, 8+strlen((char *)&data[7]));
 	}
+
+
+	// Add an additional "blank" song that can be used for forcing a display update
 	if (i == total && i < start+cnt) {
         data[3] = (long)i >> 24;
         data[4] = (long)i>> 16;
@@ -362,7 +353,6 @@ void sendSongs(int pl, int start, int cnt) {
 
 void sendPlaylists(int start, int cnt) {
     unsigned char data[75] = {0x04, 0x00, 0x1B};
-
 
 
 	for (int i=start;i<start+cnt;i++) {
@@ -508,7 +498,7 @@ void iap_handlepkt(void)
             {
             	//xmlog("iPod: 0x07?");
                 //unsigned char data[] = {0x00, 0x08, 0x6b, 0x65, 0x61, 0x72, 0x79, 0xe2, 0x80, 0x99, 0x73, 0x20, 0x69, 0x50, 0x68, 0x6f, 0x6e, 0x65, 0x00 };
-            	unsigned char data[] = {0x00, 0x08, 'X', 'M', ' ', 'R', 'a', 'd', 'i', 'o', 0x00 };
+            	unsigned char data[] = {0x00, 0x08, 'P', 'o', 'd', 'S', 'h', 'i', 'e', 'l', 'd', 0x00 };
                 iap_send_pkt(data, sizeof(data));
             	break;
             }
@@ -715,7 +705,7 @@ void iap_handlepkt(void)
             case 0x0014:
             {
             	//xmlog("iPod: getiPodName");
-                unsigned char data[] = {0x04, 0x00, 0x15, 'X', 'M', ' ', 'R', 'a', 'd', 'i', 'o', 0};
+            	unsigned char data[] = {0x04, 0x00, 0x15, 'P', 'o', 'd', 'S', 'h', 'i', 'e', 'l', 'd', 0x00 };
                 iap_send_pkt(data, sizeof(data));
                 break;
             }

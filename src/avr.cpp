@@ -1,4 +1,7 @@
-#include <WProgram.h>
+#include "podshield.h"
+
+#ifndef STANDALONE_PC
+
 #include <stdio.h>
 #include <stdarg.h>
 #include <string.h>
@@ -6,35 +9,39 @@
 
 #define HEADEND_BAUDRATE	57600
 //#define HEADEND_BAUDRATE	19200
-#define	IPOD_BAUDRATE		57600
+#define	IPOD_BAUDRATE		HEADEND_BAUDRATE
 #define XM_RADIO_BAUDRATE	9600
 #define DEBUG_BAUDRATE		57600
 
-#define	USE_VDIP1	true
+//#define	USE_VDIP1
 #define	HEADEND_RESET_DELAY	2500
 
 extern  int isHeadendConnected() {
 	return (digitalRead(33) == 0);
 }
 extern  void xmlog(char *fmt, ...) {
-		char buf[80];
-		va_list args;
-		va_start(args, fmt);
-		vsprintf(buf, fmt, args);
-		Serial.println(buf);
-		va_end(args);
+		if (DebugSerial != NULL) {
+			char buf[80];
+			va_list args;
+			va_start(args, fmt);
+			vsprintf(buf, fmt, args);
+			DebugSerial->println(buf);
+			va_end(args);
+		}
 }
 extern void xmlog_n(char *fmt, ...) {
-		char buf[80];
-		va_list args;
-		va_start(args, fmt);
-		vsprintf(buf, fmt, args);
-		Serial.print(buf);
-		va_end(args);
+		if (DebugSerial != NULL) {
+			char buf[80];
+			va_list args;
+			va_start(args, fmt);
+			vsprintf(buf, fmt, args);
+			DebugSerial->print(buf);
+			va_end(args);
+		}
 }
 
 extern void xmlog_init() {
-	Serial.begin(DEBUG_BAUDRATE);
+	DebugSerial->setBaud(DEBUG_BAUDRATE);
 }
 
 int ctsPin = 23;
@@ -44,23 +51,23 @@ int dsr_dataReqPin = 51;
 
 void out_xm(int c) {
 	//xmlog("outXm: %02x", c);
-	Serial1.write(c);
+	SerialAux1->write(c);
 }
+
+#ifdef	USE_VDIP1
 void out_vdip(int c) {
   while(digitalRead(rtsPin) == HIGH)
     ;
   out_xm(c);
 }
 
-
-
 int vdip_result(unsigned char *buf, int cnt) {
   int pos = 0;
   unsigned long timeout;
    timeout = millis() + 1500;
    while(millis() < timeout && cnt > pos) {
-     if (Serial1.available()) {
-       buf[pos++] = Serial1.read();
+     if (SerialAux1->available()) {
+       buf[pos++] = SerialAux1->read();
      }
    }
    //Serial.print("vdipResCnt: ");
@@ -88,7 +95,7 @@ void vdip_connect() {
     out_vdip(0x0d);
     cnt = vdip_result(buf, 2);
     delay(250);
-    Serial1.flush();
+    SerialAux1->flush();
 
     for (i=0;i<16;i++) {
       out_vdip(0x85);
@@ -203,7 +210,7 @@ void setupVdip1() {
   pinMode(dsr_dataReqPin, OUTPUT);
   digitalWrite(ctsPin, LOW);
   delay(250);
-  Serial1.begin(XM_RADIO_BAUDRATE);
+  SerialAux1->setBaud(XM_RADIO_BAUDRATE);
     digitalWrite(dsr_dataReqPin, HIGH);
     while(digitalRead(dtr_dataAckPin) != HIGH)
       ;
@@ -213,19 +220,21 @@ void setupVdip1() {
 
 
 }
+#endif
+
 
 extern void xmcomm_init() {
-	if (USE_VDIP1)
+#ifdef USE_VDIP_1
 		setupVdip1();
-	else {
-		xmlog("Skipping vdip1");
-		  Serial1.begin(XM_RADIO_BAUDRATE);
-	}
+#else
+		SerialAux1->setBaud(XM_RADIO_BAUDRATE);
+#endif
+
 }
 extern int xmcomm_in() {
 	int c;
-	if (Serial1.available()) {
-		c = Serial1.read();
+	if (SerialAux1->available()) {
+		c = SerialAux1->read();
 		//xmlog("xmIn: %02x", c);
 		return c;
 	}
@@ -234,10 +243,11 @@ extern int xmcomm_in() {
 }
 
 extern void xmcomm_out(unsigned char c) {
-	if (USE_VDIP1)
-			out_vdip(c);
-	else
-		out_xm(c);
+#ifdef USE_VDIP1
+	out_vdip(c);
+#else
+	out_xm(c);
+#endif
 }
 
 extern void headconn_on() {
@@ -257,15 +267,15 @@ extern void headcomm_init() {
 	pinMode(37, OUTPUT);
 	pinMode(33, INPUT);
 	headconn_on();
-	Serial2.begin(HEADEND_BAUDRATE);
+	HeadSerial->setBaud(HEADEND_BAUDRATE);
 
 }
 
 
 extern int headcomm_in() {
 	int c;
-	if (Serial2.available()) {
-		c = Serial2.read();
+	if (HeadSerial->available()) {
+		c = HeadSerial->read();
 		//xmlog("ipodin: %02x", c);
 		return c;
 	}
@@ -274,20 +284,20 @@ extern int headcomm_in() {
 }
 
 extern void headcomm_out(unsigned char c) {
-	Serial2.write(c);
+	HeadSerial->write(c);
 }
 
 extern  void ipodcomm_init() {
 	pinMode(49, INPUT);
-	Serial3.begin(IPOD_BAUDRATE);
+	IPodSerial->setBaud(IPOD_BAUDRATE);
 
 }
 
 
 extern int ipodcomm_in() {
 	int c;
-	if (Serial3.available()) {
-		c = Serial3.read();
+	if (IPodSerial->available()) {
+		c = IPodSerial->read();
 		//xmlog("ipodin: %02x", c);
 		return c;
 	}
@@ -296,15 +306,15 @@ extern int ipodcomm_in() {
 }
 
 extern  void ipodcomm_out(unsigned char c) {
-	Serial3.write(c);
+	IPodSerial->write(c);
 }
 
 extern int isIpodConnected() {
 	return (digitalRead(49));
 }
 extern int debug_in() {
-	if (Serial.available())
-		return Serial.read();
+	if (DebugSerial->available())
+		return DebugSerial->read();
 	else
 		return -1;
 
@@ -326,3 +336,5 @@ extern void eeprom_read_block(long pos, unsigned char *buf, int len) {
 	for (int i=0;i<len;i++)
 		*(buf+i) = eeprom_read(pos+i);
 }
+
+#endif

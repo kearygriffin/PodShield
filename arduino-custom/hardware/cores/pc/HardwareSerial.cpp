@@ -63,7 +63,7 @@ inline void store_char(unsigned char c, ring_buffer *rx_buffer)
 	}
 }
 
-#if defined(__AVR_ATmega1280__) || defined(__AVR_ATmega644P__)
+#if defined(__AVR_ATmega1280__)
 
 SIGNAL(SIG_USART0_RECV)
 {
@@ -76,7 +76,7 @@ SIGNAL(SIG_USART1_RECV)
 	unsigned char c = UDR1;
   store_char(c, &rx_buffer1);
 }
-#if defined(__AVR_ATmega1280__)
+
 SIGNAL(SIG_USART2_RECV)
 {
 	unsigned char c = UDR2;
@@ -88,7 +88,7 @@ SIGNAL(SIG_USART3_RECV)
 	unsigned char c = UDR3;
   store_char(c, &rx_buffer3);
 }
-#endif
+
 #else
 
 #if defined(__AVR_ATmega8__)

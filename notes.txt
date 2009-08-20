@@ -1,0 +1,7 @@
+eeprom & nvram format:
+0:3-  KGXX
+X:x+1-Module signature ('F'R' = start of free memory)
+X+2: Memory ID
+X+3: Memory ID version
+X+4:x+7-Block size
+

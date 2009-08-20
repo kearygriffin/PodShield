@@ -25,22 +25,27 @@
 
 # project specific settings
 
+
+
 BUILD_DIR=build
 TARGET=$(BUILD_DIR)/ipodshield
 OBJDIR=$(BUILD_DIR)
 #MODULES=src/x.cpp
-BUILD_TARGETS=src/main.cpp src/xm.cpp src/iap.cpp src/xm-avr.cpp ${MODULES}
+BUILD_TARGETS=src/main.cpp src/xm.cpp src/iap.cpp src/avr.cpp src/pc.cpp src/ArduinoSerial.cpp \
+	src/PCSerial.cpp src/serports.cpp \
+	${MODULES}
+	
 BUILD_INCLUDES=src/podshield.h src/podshieldconfig.h src/podshieldresources.h  
 ARDUINO_DIR=./arduino-015/
 ARDUINO_CUSTOM_DIR=./arduino-custom/
 MEMCHECK_FILE=build/memcheck-in.txt
-LOAD_PORT = /dev/tty.usb*
+LOAD_PORT = /dev/ttyUSB0
 READ_PORT = /dev/cu.usb*
 
 # arduino model specific settings
 
 UPLOAD_RATE = 57600 
-AVRDUDE_PROGRAMMER = stk500
+AVRDUDE_PROGRAMMER = stk500v1
 #MCU = atmega1280
 CLOCK=16000000
 ###############################
@@ -51,25 +56,59 @@ CLOCK=16000000
 ARDUINO = $(CORE_DIR)/hardware/cores/$(CORE)
 ARDUINO_LIBS = $(ARDUINO_DIR)/hardware/libraries
 ARDUINO_CUSTOM_LIBS=$(ARDUINO_CUSTOM_DIR)/hardware/libraries
-LIB_TARGETS=$(ARDUINO_LIBS)/EEPROM/EEPROM.cpp
+ARDUINO_LIB_TARGETS=$(ARDUINO_LIBS)/EEPROM/EEPROM.cpp
 #AVR_TOOLS_PATH = $(INSTALL_DIR)/hardware/tools/avr/bin
 AVR_TOOLS_PATH=/usr/bin
+FORMAT = ihex
+
+# DEFAULT
+all: build avrsize memcheck
+
+$(BUILD_DIR)/makdefines: src/util/makdefine.cpp src/podshieldconfig.h src/podshieldresources.h
+	@mkdir -p $(BUILD_DIR)
+	gcc -lstdc++ src/util/makdefine.cpp -o $(BUILD_DIR)/makdefines
+
+-include $(BUILD_DIR)/makdefines.mak
+
+CORE=arduino
+CORE_DIR=$(ARDUINO_DIR)
+
+ifdef STANDALONE_PC
+	CORE=pc
+	CORE_DIR=$(ARDUINO_CUSTOM_DIR)
+endif
+ifdef SHIELD_STANDALONE
+	CORE=arduino-644p
+	CORE_DIR=$(ARDUINO_CUSTOM_DIR)
+endif
+
+# Environment settings
+ifdef STANDALONE_PC
+CC = gcc
+CXX = gcc -DWiring_h=1
+EXTRA_LIB=-lrt
+MCUARG=
+SRC=
+CXXSRC = $(BUILD_TARGETS) $(ARDUINO)/Print.cpp
+else
+CC = $(AVR_TOOLS_PATH)/avr-gcc
+CXX = $(AVR_TOOLS_PATH)/avr-gcc
+MCUARG="-mmcu=$(MCU)"
 SRC =  $(ARDUINO)/pins_arduino.c $(ARDUINO)/wiring.c \
 $(ARDUINO)/wiring_analog.c $(ARDUINO)/wiring_digital.c \
 $(ARDUINO)/wiring_pulse.c \
 $(ARDUINO)/wiring_shift.c $(ARDUINO)/WInterrupts.c
 # removed wiring_serial.c
-CXXSRC = $(BUILD_TARGETS) $(ARDUINO)/HardwareSerial.cpp $(ARDUINO)/WMath.cpp $(ARDUINO)/Print.cpp $(LIB_TARGETS)
-FORMAT = ihex
+CXXSRC = $(BUILD_TARGETS) $(ARDUINO)/HardwareSerial.cpp $(ARDUINO)/WMath.cpp $(ARDUINO)/Print.cpp $(ARDUINO_LIB_TARGETS)
+endif
 
-# Environment settings
-CC = $(AVR_TOOLS_PATH)/avr-gcc
-CXX = $(AVR_TOOLS_PATH)/avr-gcc
+
 OBJCOPY = $(AVR_TOOLS_PATH)/avr-objcopy
 OBJDUMP = $(AVR_TOOLS_PATH)/avr-objdump
 SIZE = $(AVR_TOOLS_PATH)/avr-size
 NM = $(AVR_TOOLS_PATH)/avr-nm
-AVRDUDE = $(AVR_TOOLS_PATH)/avrdude
+#AVRDUDE = $(AVR_TOOLS_PATH)/avrdude
+AVRDUDE=./tools/avrdude
 REMOVE = rm -f
 MV = mv -f
 
@@ -77,25 +116,21 @@ MV = mv -f
 ###### HELPFUL DEFINITIONS =====
 
 # Compiler Flags
-ALL_CFLAGS = -MD -c -g -Os -w -ffunction-sections -fdata-sections -mmcu=$(MCU) -DF_CPU=$(CLOCK)L -I$(ARDUINO) -I$(ARDUINO_LIBS)
-ALL_CXXFLAGS = -MD -c -g -Os -w -fno-exceptions -ffunction-sections -fdata-sections -mmcu=$(MCU) -DF_CPU=$(CLOCK)L -I$(ARDUINO) -I$(ARDUINO_LIBS)
+ALL_CFLAGS = -MD -c -g -Os -w -ffunction-sections -fdata-sections $(MCUARG) -DF_CPU=$(CLOCK)L -I$(ARDUINO) -I$(ARDUINO_LIBS)
+ALL_CXXFLAGS = -MD -c -g -Os -w -fno-exceptions -ffunction-sections -fdata-sections $(MCUARG) -DF_CPU=$(CLOCK)L -I$(ARDUINO) -I$(ARDUINO_LIBS)
 
 # Assembler Flags
 ALL_ASFLAGS = -mmcu=$(MCU) -I. -x assembler-with-cpp
 
 # Loader flags
-AVRDUDE_FLAGS = -C $(INSTALL_DIR)/hardware/tools/avr/etc/avrdude.conf -V -p $(MCU) -P $(LOAD_PORT) -c $(AVRDUDE_PROGRAMMER) -b $(UPLOAD_RATE) -D -U flash:w:$(TARGET).hex:i
+AVRDUDE_FLAGS = -C ./tools/avrdude.conf -V -p $(MCU) -P $(LOAD_PORT) -c $(AVRDUDE_PROGRAMMER) -b $(UPLOAD_RATE) -D -U flash:w:$(TARGET).hex:i
 
 # Define all object files.
 OBJ = $(SRC:%.c=$(OBJDIR)/%.o) $(CXXSRC:%.cpp=$(OBJDIR)/%.o) $(ASRC:%.S=$(OBJDIR)/%.o)
 
-
-
 ###### ROUTINES #######
 
 
-# DEFAULT
-all: build avrsize memcheck
 
 
 # READ
@@ -122,19 +157,6 @@ incmakdefines: $(BUILD_DIR)/makdefines
 $(BUILD_DIR)/makdefines.mak: $(BUILD_DIR)/makdefines
 	@$(BUILD_DIR)/makdefines > $(BUILD_DIR)/makdefines.mak
 
-$(BUILD_DIR)/makdefines: src/util/makdefine.cpp src/podshieldconfig.h src/podshieldresources.h
-	@mkdir -p $(BUILD_DIR)
-	gcc -lstdc++ src/util/makdefine.cpp -o $(BUILD_DIR)/makdefines
-
--include $(BUILD_DIR)/makdefines.mak
-
-ifdef SHIELD_STANDALONE
-	CORE=arduino-644p
-	CORE_DIR=$(ARDUINO_CUSTOM_DIR)
-else
-	CORE=arduino
-	CORE_DIR=$(ARDUINO_DIR)
-endif
 
 # Transcode: create HEX file from ELF file.
 hex: $(TARGET).elf
@@ -143,7 +165,7 @@ hex: $(TARGET).elf
 
 # Link: create ELF output file from object files.
 $(TARGET).elf: $(OBJ)
-	$(CC) -Os -Wl,--gc-sections -mmcu=${MCU} -o $(TARGET).elf $(OBJ) -lm
+	$(CC) -Os -Wl,--gc-sections -mmcu=${MCU} -o $(TARGET).elf $(OBJ) -lm $(EXTRA_LIB)
 
 #elf: $(TARGET).elf
 

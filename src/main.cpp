@@ -1,14 +1,29 @@
+#ifndef	STANDALONE_PC
 #include <WProgram.h>
+#endif
 
 extern void init();
 extern void setup();
 extern void loop();
 
-void __cxa_pure_virtual()
+extern "C" void __cxa_pure_virtual()
 {
-cli();
+//cli();
 for (;;);
 }
+
+/*
+extern "C" void * operator new(size_t size)
+{
+  return malloc(size);
+}
+
+extern "C" void operator delete(void * ptr)
+{
+  free(ptr);
+}
+*/
+
 
 int main(void) {
 
@@ -23,5 +38,4 @@ for (;;) {
 	}
 
 }
-
 

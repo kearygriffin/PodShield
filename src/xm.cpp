@@ -1,6 +1,7 @@
 #include "podshield.h"
-#include <WProgram.h>
-#include <avr/pgmspace.h>
+//#include <WProgram.h>
+//#include <avr/pgmspace.h>
+#include "pgmspace.h"
 #include <string.h>
 #include <stdio.h>
 
@@ -24,7 +25,7 @@ extern void headconn_reset();
 extern int debug_in();
 extern void xmlog(char *, ...);
 extern void xmlog_init();
-extern void xm_init_protocol(int b);
+extern void xm_init_protocol();
 extern void eeprom_write(long pos, unsigned char c);
 extern unsigned char eeprom_read(long pos);
 extern void eeprom_write_block(long pos, unsigned char *buf, int len);
@@ -149,7 +150,7 @@ struct ramChannelInfo ramChannels[MAX_RAM_CHANNELS];
 
 #define	XM_DEFAULT_CHANNEL		1
 
-const char *eeVer = "KG03";
+const char *eeVer = "KG06";
 int bootCnt = 0;
 static int playlist = 0;
 int playlistGenreId = 0;
@@ -205,14 +206,14 @@ void eeprom_setVolatile(int flag, int val) {
 int xm_getDefaultChannel() {
 	int c;
 	c = eeprom_getVolatile(SAVED_CHANNEL_FLAG);
-	if (c >= 0)
+	if (c > 0 && c != 0xff)
 		return c;
 	return XM_DEFAULT_CHANNEL;
 }
 
 int incBootCount() {
 	int c = eeprom_getVolatile(BOOT_CNT_FLAG);
-	if (c == -1)
+	if (c == 0xff)
 		c = 0;
 	else
 		c++;
@@ -282,7 +283,7 @@ void eeprom_erase() {
 	int i;
 	unsigned char buf[16];
 
-	//xmlog("Erasing eeprom...");
+	xmlog("Erasing eeprom...");
 	memset(buf, 0xff, sizeof(buf));
 
 	for (i=0;i<EEPROM_SIZE;i += sizeof(buf)) {
@@ -338,14 +339,19 @@ extern void xm_send_cmd(unsigned char *data, int dataLen, void (*handler)(struct
 
 void xm_powerOff() {
 	//xmlog("Power Off");
-	xm_send_cmd(xm_powerOffCmd, sizeof(xm_muteOffCmd),  null);
+	xm_send_cmd(xm_powerOffCmd, sizeof(xm_powerOffCmd),  null);
 
 }
 
+int mute = 0;
+long muteTime = 0;
 void xm_init_complete(struct xmCmdQueueEntry *cmd, unsigned char *resp, int respLen) {
 	xmIsInited = 1;
 	xmChangeChannel(currentChannel, false);
-	//xmlog("Init complete.");
+	xmlog("Init complete.");
+	if (mute) {
+		muteTime = millis() + 250;
+	}
 }
 
 char *getAntStatus(int stat) {
@@ -377,13 +383,13 @@ void xm_power_on_status(struct xmCmdQueueEntry *cmd, unsigned char *resp, int re
 	char radioId[9];
 	//if (*(resp+1) == 0x03)
 		//xmlog("WARN!: XM Radio not activated.");
-	//xmlog("RX version: %d", *(resp+4));
+	xmlog("RX version: %d", *(resp+4));
 	//xmlog("RX date: %02x/%02x/%02x%02x", *(resp+5), *(resp+6), *(resp+7), *(resp+8));
 	//xmlog("CMBver: %d", *(resp + 13));
 	//xmlog("CMB date: %02x/%02x/%02x%02x", *(resp+14), *(resp+15), *(resp+16), *(resp+17));
 	memcpy(radioId, resp+19, 8);
 	radioId[8] = 0;
-	//xmlog("RadioID: %s", radioId);
+	xmlog("RadioID: %s", radioId);
 }
 
 void xm_push_cmd(struct xmCmdQueueEntry *cmd) {
@@ -392,7 +398,7 @@ void xm_push_cmd(struct xmCmdQueueEntry *cmd) {
 		newHead = 0;
 	if (newHead == xmCmdQueueTail) {
 		//xmlog("Xm cmd queue full!");
-		xm_init_protocol(false);
+		xm_init_protocol();
 	}
 	memcpy(&xmCmdQueue[xmCmdQueueHead], cmd, sizeof(*cmd));
 	xmCmdQueueHead = newHead;
@@ -421,6 +427,17 @@ void _xm_send_cmd(unsigned char *data, int dataLen, int expectedResponse, int ti
 	entry.handler = handler;
 	xm_push_cmd(&entry);
 }
+
+void xm_mute() {
+	mute = 1;
+	xm_send_cmd(xm_muteOnCmd, sizeof(xm_muteOnCmd), null);
+}
+
+void xm_mute_off() {
+	mute = 0;
+	xm_send_cmd(xm_muteOffCmd, sizeof(xm_muteOffCmd), null);
+}
+
 
 void xm_send_cmd(unsigned char *data, int dataLen, void (*handler)(struct xmCmdQueueEntry *cmdEntry, unsigned char *resp, int respLen))
 {
@@ -487,7 +504,7 @@ void notifyChange() {
 	delayedNotification = 0;
 }
 void logCurChannelInfo() {
-	//xmlog("%d - %s (%s): %s - %s", currentChannel, curChannelInfo.channelName, curChannelInfo.channelGenre, curChannelInfo.artistName, curChannelInfo.songTitle);
+	xmlog("%d - %s (%s): %s - %s", currentChannel, curChannelInfo.channelName, curChannelInfo.channelGenre, curChannelInfo.artistName, curChannelInfo.songTitle);
 }
 int infoChanged = 0;
 struct channelInfo origInfo;
@@ -669,7 +686,7 @@ void xmChangeChannel(int newChannel, int delay) {
 	validDataTime = millis() + DISPLAY_STATION_TIME;
 }
 #define XM_INIT_TIMEOUT 	1000
-void xm_init_protocol(int first) {
+void xm_init_protocol() {
 
 	xmIsInited = 0;
 	gettingInfo = 0;
@@ -680,14 +697,20 @@ void xm_init_protocol(int first) {
 	xmRespLen = 0;
 	xmAwaitingResponse = 0;
 	xm_flush_cmd_queue();
-//	if (0 && first)
-		_xm_send_cmd(xm_initCmd, sizeof(xm_initCmd), -1, XM_INIT_TIMEOUT, false, 0, null);
+	_xm_send_cmd(xm_initCmd, sizeof(xm_initCmd), -1, XM_INIT_TIMEOUT, false, 0, null);
 	_xm_send_cmd(xm_resetCmd, sizeof(xm_resetCmd), 0xe4, XM_INIT_TIMEOUT, true, 0, null);
 	_xm_send_cmd(xm_enableAudioCmd, sizeof(xm_enableAudioCmd), 0xe4, XM_TIMEOUT, true, 0, null);
 	_xm_send_cmd(xm_dacMuteOffCmd, sizeof(xm_dacMuteOffCmd), 0xe4, XM_TIMEOUT, true, 0, null);
 	xm_send_cmd(xm_powerOnCmd, sizeof(xm_powerOnCmd), xm_power_on_status);
 	xm_send_cmd(xm_getSignalData, sizeof(xm_getSignalData), xm_signal_data);
-	xm_send_cmd(xm_muteOffCmd, sizeof(xm_muteOffCmd), xm_init_complete);
+
+	if (mute) {
+		xmlog("Sending mute for xm_init_protocol");
+		xm_send_cmd(xm_muteOnCmd, sizeof(xm_muteOnCmd), xm_init_complete);
+	}
+	else {
+		xm_send_cmd(xm_muteOffCmd, sizeof(xm_muteOffCmd), xm_init_complete);
+	}
 
 	//_xm_send_cmd(xm_dacMuteOffCmd, sizeof(xm_dacMuteOffCmd), 0, 0, true, 0, null);
 
@@ -873,7 +896,7 @@ void xm_buildresponse() {
 	}
 	if (xmAwaitingResponse && millis() > xmTimeoutTime) {
 		if (xmCurCmd.resetOnFail)
-			xm_init_protocol(false);
+			xm_init_protocol();
 		else {
 			xmAwaitingResponse = 0;
 			if (xmCurCmd.handler != null) {
@@ -1001,7 +1024,7 @@ void possiblyFlushStations() {
 			(((flushedToEeprom && getRamStationCount() > 0) || getRamStationCount() > MAX_FLUSH_RAM_COUNT) && tripsThroughChannels >= 2) ||
 			(tripsThroughChannels == 1 && channelInit < 0)) {
 				flushStationsToEeprom();
-				if (channelInit < 0)
+				if (channelInit < 0 || channelInit == 0xff)
 					eeprom_setVolatile(CHANNEL_INIT_FLAG, 1);
 			}
 }
@@ -1491,8 +1514,10 @@ void channelBuilderHandler(struct xmCmdQueueEntry *cmd, unsigned char *resp, int
 		possiblyFlushStations();
 		flushedToEeprom = 0;
 		compactGenres();
-		if (tripsThroughChannels >= 3)
+		if (tripsThroughChannels >= 3) {
 			hasChannels = 1;
+			xmlog("Done scanning channels.");
+		}
 		//logStations();
 		//xmlog("Finished building channels: %d (%d)", channelCount, size);
 	}
@@ -1937,7 +1962,12 @@ void getIPodArtist(int pl, int tracknum, char *data, int useExt) {
 	}
 }
 
+extern int isIpodConnected();
+extern int ipodcomm_in();
+extern void ipodcomm_out(unsigned char c);
+extern void ipodcomm_init();
 
+int ipodConnected = 0;
 void setup() {
 	int n;
 
@@ -1947,7 +1977,7 @@ void setup() {
 	if (EEPROM_MIN < strlen(eeVer)) {
 		//xmlog("ERROR!!! EEPROM_MIN to small");
 	}
-	n = analogRead(5);
+	//n = analogRead(5);
 	//xmlog("iPodDetect: %d", n);
 
 
@@ -1963,8 +1993,16 @@ void setup() {
 	ipodSetPlaylist(playlist);
 	compactGenres();
 	//setGenreIdFromPlaylist();
-	xm_init_protocol(true);
+	ipodConnected = isIpodConnected();
+	if (ipodConnected) {
+		xmlog("IpodConnected... Muting?");
+		mute = 1;
+	}
+
+	xm_init_protocol();
 	head_setup();
+	ipodcomm_init();
+
 	validDataTime = millis() + DISPLAY_STATION_TIME;
 }
 
@@ -1990,6 +2028,13 @@ void xm_loop() {
 		nxtTurn = millis() + 10000L;
 	}
 	*/
+	if (mute && xmIsInited && !xmAwaitingResponse && muteTime > 0) {
+		if (millis() >= muteTime) {
+			xmlog("Resending mute...");
+			xm_mute();
+			muteTime = 0;
+		}
+	}
 	if (xmIsInited == 1 && !xmAwaitingResponse && !hasChannels) {
 		buildChannelList();
 	}
@@ -2018,14 +2063,51 @@ void xm_loop() {
 
 }
 
+void ipod_direct() {
+	int c;
+	while((c = ipodcomm_in()) >= 0) {
+		headcomm_out(c);
+	}
+	while((c = headcomm_in()) >= 0) {
+		ipodcomm_out(c);
+	}
+}
 void yield() {
 	xm_loop();
 }
+extern void iap_reset();
+
+long ipodConnectedMillis = 0;
+#define IPOD_CONNECT_MILLIS 100
 void loop() {
 	int c;
 
+
+	int ic = isIpodConnected();
+	if (ipodConnected != ic) {
+		if (ipodConnectedMillis == 0)
+			ipodConnectedMillis = millis() + IPOD_CONNECT_MILLIS;
+		else if (millis() >= ipodConnectedMillis) {
+			ipodConnected = ic;
+			if (!ipodConnected) {
+				iap_reset();
+				xm_mute_off();
+				headconn_reset();
+			} else {
+				xm_mute();
+				headconn_reset();
+			}
+			ipodConnectedMillis = 0;
+		}
+	} else
+		ipodConnectedMillis = 0;
+
 	xm_loop();
-	head_loop();
+	if (ipodConnected) {
+		ipod_direct();
+	}
+	else
+		head_loop();
 
 	c = debug_in();
 	if (c >= 0) {
@@ -2033,6 +2115,7 @@ void loop() {
 			xmChangeChannel(c-'0', false);
 		} else if (c == 'r') {
 			headconn_reset();
+		} else if (c == 'm') {
 		}
 	}
 }

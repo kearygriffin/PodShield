@@ -15,7 +15,9 @@ int main(int argc, char * argv[]) {
 #elif defined(STANDALONE_644p)
 	printf("MCU=atmega644p\n");
 	printf("SHIELD_STANDALONE=1\n");
-	#else
+#elif defined(STANDALONE_PC)
+	printf("STANDALONE_PC=1");
+#else
 #error "Shield type undefined.  Can't make"
 #endif
 

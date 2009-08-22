@@ -1,3 +1,4 @@
+#include "podshield.h"
 #ifndef	STANDALONE_PC
 #include <WProgram.h>
 #endif

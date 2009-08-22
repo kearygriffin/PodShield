@@ -22,7 +22,7 @@ ArduinoSerial PSerial0(&Serial);
 #endif
 
 #if defined(STANDALONE_PC)
-PodSerial *DebugSerial = null;
+PodSerial *DebugSerial = NULL;
 PodSerial *HeadSerial = &PSerial0;
 PodSerial *SerialAux1 = &PSerial1;
 #elif defined(SHIELD_REV_1)

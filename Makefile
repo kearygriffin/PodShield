@@ -65,6 +65,7 @@ FORMAT = ihex
 all: build avrsize memcheck
 
 $(BUILD_DIR)/makdefines: src/util/makdefine.cpp src/podshieldconfig.h src/podshieldresources.h
+	rm -rf $(BUILD_DIR)
 	@mkdir -p $(BUILD_DIR)
 	gcc -lstdc++ src/util/makdefine.cpp -o $(BUILD_DIR)/makdefines
 

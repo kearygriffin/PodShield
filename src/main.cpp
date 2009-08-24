@@ -3,9 +3,15 @@
 #include <WProgram.h>
 #endif
 
-extern void init();
-extern void setup();
-extern void loop();
+extern "C" void init();
+extern "C" void setup();
+extern "C" void loop();
+
+#ifdef STANDALONE_PC
+void init() {
+
+}
+#endif
 
 extern "C" void __cxa_pure_virtual()
 {

@@ -31,10 +31,14 @@ BUILD_DIR=build
 TARGET=$(BUILD_DIR)/ipodshield
 OBJDIR=$(BUILD_DIR)
 #MODULES=src/x.cpp
-BUILD_TARGETS=src/main.cpp src/xm.cpp src/iap.cpp src/avr.cpp src/pc.cpp src/ArduinoSerial.cpp \
+#BUILD_TARGETS=src/main.cpp src/xm.cpp src/iap.cpp src/avr.cpp src/pc.cpp src/ArduinoSerial.cpp \
+#	src/PCSerial.cpp src/serports.cpp \
+#	${MODULES}
+	
+BUILD_TARGETS=src/main.cpp src/ArduinoSerial.cpp src/Module.cpp src/ModuleManager.cpp src/RunnableManager.cpp \
 	src/PCSerial.cpp src/serports.cpp \
 	${MODULES}
-	
+
 BUILD_INCLUDES=src/podshield.h src/podshieldconfig.h src/podshieldresources.h  
 ARDUINO_DIR=./arduino-015/
 ARDUINO_CUSTOM_DIR=./arduino-custom/
@@ -71,6 +75,12 @@ $(BUILD_DIR)/makdefines: src/util/makdefine.cpp src/podshieldconfig.h src/podshi
 
 -include $(BUILD_DIR)/makdefines.mak
 
+ifdef STANDALONE_PC
+TARGET_BIN=$(TARGET)
+else
+TARGET_BIN=$(TARGET).elf
+endif
+
 CORE=arduino
 CORE_DIR=$(ARDUINO_DIR)
 
@@ -87,7 +97,7 @@ endif
 ifdef STANDALONE_PC
 CC = gcc
 CXX = gcc -DWiring_h=1
-EXTRA_LIB=-lrt
+EXTRA_LIB=-lrt -lstdc++
 MCUARG=
 SRC=
 CXXSRC = $(BUILD_TARGETS) $(ARDUINO)/Print.cpp
@@ -151,8 +161,11 @@ clean:
 	rm -rf $(BUILD_DIR)
 
 # BUILD
-build: incmakdefines hex
-
+ifdef STANDALONE_PC
+build: incmakdefines $(TARGET_BIN) 
+else
+build: incmakdefines $(TARGET_BIN) hex
+endif
 incmakdefines: $(BUILD_DIR)/makdefines
 
 $(BUILD_DIR)/makdefines.mak: $(BUILD_DIR)/makdefines
@@ -160,19 +173,18 @@ $(BUILD_DIR)/makdefines.mak: $(BUILD_DIR)/makdefines
 
 
 # Transcode: create HEX file from ELF file.
-hex: $(TARGET).elf
-	$(OBJCOPY) -O $(FORMAT) -R .eeprom $(TARGET).elf $(TARGET).hex
+hex: $(TARGET_BIN)
+	$(OBJCOPY) -O $(FORMAT) -R .eeprom $(TARGET_BIN) $(TARGET).hex
 
 
 # Link: create ELF output file from object files.
-$(TARGET).elf: $(OBJ)
-	$(CC) -Os -Wl,--gc-sections -mmcu=${MCU} -o $(TARGET).elf $(OBJ) -lm $(EXTRA_LIB)
+$(TARGET_BIN): $(OBJ)
+	$(CC) -Os -Wl,--gc-sections -mmcu=${MCU} -o $(TARGET_BIN) $(OBJ) -lm $(EXTRA_LIB)
 
-#elf: $(TARGET).elf
-
-avrsize: 
-	$(AVR_TOOLS_PATH)/avr-size --format=avr --mcu=$(MCU) $(TARGET).elf
-	
+avrsize:
+ifndef STANDALONE_PC 
+	$(AVR_TOOLS_PATH)/avr-size --format=avr --mcu=$(MCU) $(TARGET_BIN)
+endif
 
 memcheck:
 #	@gcc -DSHIELD_MEMCHECK -lstdc++ src/util/memcheck.cpp -o build/memcheck 

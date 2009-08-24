@@ -5,6 +5,7 @@
  *      Author: keary
  */
 
+#include "podshield.h"
 #ifndef STANDALONE_PC
 #include "ArduinoSerial.h"
 

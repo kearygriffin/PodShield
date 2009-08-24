@@ -5,8 +5,22 @@
  *      Author: keary
  */
 
+#include "podshield.h"
 #ifdef STANDALONE_PC
 #include "PCSerial.h"
+namespace  C {
+#include <stdio.h>
+#include <stdlib.h>
+#include <fcntl.h>
+#include <termios.h>
+#include <unistd.h>
+#include <sys/signal.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <stdarg.h>
+#include <string.h>
+#include <time.h>
+}
 
 PCSerial::PCSerial(char *portName) {
 	fd = -1;
@@ -21,7 +35,7 @@ int PCSerial::open_port(void){
 	if (portName == NULL)
 		return 1;
 
-	fd = open(portName, O_RDWR | O_NOCTTY | O_NONBLOCK);
+	fd = C::open(portName, O_RDWR | O_NOCTTY | O_NONBLOCK);
 
 	if(fd == -1) // if open is unsucessful
 
@@ -34,7 +48,7 @@ int PCSerial::open_port(void){
 
 	{
 
-	 	fcntl(fd, F_SETFL, O_NONBLOCK|O_NDELAY);
+	 	C::fcntl(fd, F_SETFL, O_NONBLOCK|O_NDELAY);
 
 	}
 
@@ -48,12 +62,12 @@ int PCSerial::open_port(void){
 
 int PCSerial::configure_port(int fd , long baud)      {
 
-	struct termios port_settings;      // structure to store the port settings in
+	struct C::termios port_settings;      // structure to store the port settings in
 
 	if (fd == 1)
 		return fd;
 
-	speed_t st;
+	C::speed_t st;
 	switch(baud) {
 	case	300:
 		st = B300;
@@ -81,11 +95,11 @@ int PCSerial::configure_port(int fd , long baud)      {
 		break;
 	}
 
-	tcgetattr(fd, &port_settings);
+	C::tcgetattr(fd, &port_settings);
 
-	cfsetispeed(&port_settings, st);    // set baud rates
+	C::cfsetispeed(&port_settings, st);    // set baud rates
 
-	cfsetospeed(&port_settings, st);
+	C::cfsetospeed(&port_settings, st);
 
 	port_settings.c_cflag &= ~PARENB;    // set no parity, stop bits, data bits
 
@@ -105,7 +119,7 @@ int PCSerial::configure_port(int fd , long baud)      {
 
 	port_settings.c_oflag = 0;
 
-	tcsetattr(fd, TCSANOW, &port_settings);    // apply the settings to the port
+	C::tcsetattr(fd, TCSANOW, &port_settings);    // apply the settings to the port
 
 	return(fd);
 
@@ -131,7 +145,7 @@ uint8_t PCSerial::available() {
 		return 1;
 	int cnt;
 	unsigned char c;
-	cnt = read(fd, &c, 1);
+	cnt = C::read(fd, &c, 1);
 	if (cnt > 0) {
 		buffered = c;
 		return 1;
@@ -147,7 +161,7 @@ int PCSerial::read(void) {
 		buffered = -1;
 		return c;
 	}
-	int n = read(fd, &c, 1);
+	int n = C::read(fd, &c, 1);
 	if (n > 0)
 		return c;
 	else
@@ -160,7 +174,11 @@ void PCSerial::flush(void) {
 }
 void PCSerial::write(uint8_t c) {
 	unsigned char byt = (unsigned char)c;
-	write(fd, &c, 1);
+	C::write(fd, &c, 1);
+}
+
+void Print::write(uint8_t) {
+
 }
 
 

@@ -8,6 +8,7 @@
 #ifndef ARDUINOPODSERIAL_H_
 #define ARDUINOPODSERIAL_H_
 
+
 #include <HardwareSerial.h>
 #include "PodSerial.h"
 
@@ -22,6 +23,7 @@ public:
 	virtual int read(void);
 	virtual void flush(void);
 	virtual void write(uint8_t c);
+	virtual bool canSend();
 
 };
 

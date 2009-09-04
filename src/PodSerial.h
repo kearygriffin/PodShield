@@ -18,6 +18,7 @@ public:
 	virtual int read(void) = 0;
 	virtual void flush(void) = 0;
 	virtual void write(uint8_t c) = 0;
+	virtual bool canSend() { return true; };
 };
 
 #endif /* PODSERIAL_H_ */

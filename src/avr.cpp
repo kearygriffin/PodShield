@@ -252,10 +252,12 @@ extern void xmcomm_out(unsigned char c) {
 
 extern void headconn_on() {
 	digitalWrite(37, HIGH);
+	digitalWrite(31, HIGH);
 }
 
 extern void headconn_off() {
 	digitalWrite(37, LOW);
+	digitalWrite(31, LOW);
 }
 
 extern void headconn_reset() {
@@ -265,6 +267,7 @@ extern void headconn_reset() {
 }
 extern void headcomm_init() {
 	pinMode(37, OUTPUT);
+	pinMode(31, OUTPUT);
 	pinMode(33, INPUT);
 	headconn_on();
 	HeadSerial->setBaud(HEADEND_BAUDRATE);

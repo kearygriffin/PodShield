@@ -36,7 +36,7 @@ void Print::print(uint8_t b)
 
 void Print::print(char c)
 {
-  print((int) c);
+  print((byte) c);
 }
 
 void Print::print(const char c[])

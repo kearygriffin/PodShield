@@ -5,16 +5,18 @@
  *      Author: keary
  */
 
+#include "podshield.h"
+
 #include "cppfix.h"
 #include "ModuleManager.h"
 #include "RunnableManager.h"
 
 ModuleManager::ModuleManager() {
-	// TODO Auto-generated constructor stub
-
+	moduleCnt = 0;
 }
 
 void ModuleManager::addModule(Module *m) {
+	modules[moduleCnt++] = m;
 	getRunnableManager().addRunnable(m);
 }
 
@@ -23,16 +25,15 @@ ModuleManager& getModuleManager() {
 	return mm;
 }
 
-#ifndef SKIP_MODULE_RUN
-extern "C" void setup() {
-	// Init modules here...
+void ModuleManager::init_modules() {
+	for (int i=0;i<moduleCnt;i++)
+		modules[i]->initModule();
 }
 
-extern "C" void loop() {
+void ModuleManager::module_loop() {
 	bool moreThreads;
 	do {
 		moreThreads = getRunnableManager().runOnce();
 	} while(moreThreads);
 	// Should never fall through here!
 }
-#endif

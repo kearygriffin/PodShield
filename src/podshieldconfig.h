@@ -6,3 +6,11 @@
 //#define SHIELD_1280
 //#define SHIELD_REV_1
 #endif
+
+#ifdef	STANDALONE_PC
+#define HEADEND_BAUDRATE	19200
+#else
+#define HEADEND_BAUDRATE	57600
+#endif
+
+#define IPOD_BAUDRATE	HEADEND_BAUDRATE

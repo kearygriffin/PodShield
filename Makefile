@@ -34,9 +34,11 @@ OBJDIR=$(BUILD_DIR)
 #BUILD_TARGETS=src/main.cpp src/xm.cpp src/iap.cpp src/avr.cpp src/pc.cpp src/ArduinoSerial.cpp \
 #	src/PCSerial.cpp src/serports.cpp \
 #	${MODULES}
-	
+
+MODULES = src/Headend.cpp src/TestModuleA.cpp src/TestModuleB.cpp
 BUILD_TARGETS=src/main.cpp src/ArduinoSerial.cpp src/Module.cpp src/ModuleManager.cpp src/RunnableManager.cpp \
-	src/PCSerial.cpp src/serports.cpp \
+	src/PCSerial.cpp src/serports.cpp src/util.cpp src/pc.cpp src/IPodEmulator.cpp src/PodModule.cpp \
+	src/EEMemory.cpp src/DiskMemory.cpp src/NVRamManager.cpp src/NVRam.cpp \
 	${MODULES}
 
 BUILD_INCLUDES=src/podshield.h src/podshieldconfig.h src/podshieldresources.h  
@@ -95,8 +97,8 @@ endif
 
 # Environment settings
 ifdef STANDALONE_PC
-CC = gcc
-CXX = gcc -DWiring_h=1
+CC = gcc -g
+CXX = gcc -g -DWiring_h=1 -Dbyte=uint8_t
 EXTRA_LIB=-lrt -lstdc++
 MCUARG=
 SRC=

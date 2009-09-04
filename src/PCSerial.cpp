@@ -132,7 +132,7 @@ void PCSerial::setBaud(long baud) {
 		fd = open_port();
 		if (fd < 0) {
 			printf("Err opening: %s", portName);
-			exit(1);
+			//exit(1);
 		}
 	}
 	configure_port(fd, baud);
@@ -162,8 +162,10 @@ int PCSerial::read(void) {
 		return c;
 	}
 	int n = C::read(fd, &c, 1);
-	if (n > 0)
+	if (n > 0) {
+		//debug("PCIn: %02x");
 		return c;
+	}
 	else
 		return -1;
 }

@@ -38,6 +38,7 @@ static PROGMEM unsigned char nak_data[] = {0x04, 0x00, 0x01, 0x04, 0x00, 0x00};
 IPodEmulator::IPodEmulator(PodSerial *pserial, long baud, bool autoRegister, bool startSuspended) : Module(autoRegister, startSuspended ) {
 	baudRate = baud;
 	Serial = pserial;
+	isEnabled = true;
 	iap_reset();
 }
 
@@ -133,6 +134,7 @@ int IPodEmulator::getVirtualCurrentPlaylistPosition(bool change) {
 bool IPodEmulator::Run() {
 	PT_BEGIN();
 	while(1) {
+		PT_WAIT_UNTIL(ipodEnabled());
 		if (iap_pollenabled && millis() > nextPoll) {
 			nextPoll = millis() + 500;
 			PT_WAIT_UNTIL(sender.isAvailable());

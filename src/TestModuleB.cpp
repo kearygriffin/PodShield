@@ -92,3 +92,10 @@ char *TestModuleB::getPodModuleShortName() {
 	return "TB";
 }
 
+bool TestModuleB::isInited() {
+	return true;
+}
+
+bool TestModuleB::isRetryingInit() {
+	return false;
+}

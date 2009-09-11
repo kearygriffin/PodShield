@@ -26,7 +26,6 @@ static char *songs[] = {
 static int pos = 0;
 
 TestModuleA::TestModuleA() : nv(256, TEST_MODULEA_ID, TEST_MODULEA_NVRAM, TEST_MODULEA_NVRAM_VER ){
-	zzz = 20;
 }
 
 
@@ -85,7 +84,7 @@ void TestModuleA::getPlaylistName(int pos, char *name)  {
 }
 
 bool TestModuleA::Run() {
-	debug("TestModuleA");
+	//debug("TestModuleA");
 	return false;
 }
 
@@ -97,5 +96,14 @@ char *TestModuleA::getPodModuleName() {
 }
 char *TestModuleA::getPodModuleShortName() {
 	return "TA";
+}
+
+
+bool TestModuleA::isInited() {
+	return true;
+}
+
+bool TestModuleA::isRetryingInit() {
+	return false;
 }
 

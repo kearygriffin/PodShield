@@ -3,6 +3,7 @@
 #ifdef STANDALONE_PC
 
 #define PROGMEM
+#define PSTR(x) x
 #define memcpy_P(x, y, s) memcpy(x, y, s)
 #define strncpy_P(x, y, s) strncpy(x, y, s)
 #define strcpy_P(x, y) strcpy(x,y)

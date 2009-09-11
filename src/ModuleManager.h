@@ -17,6 +17,8 @@ public:
 	void addModule(Module *mod);
 	void module_loop();
 	void init_modules();
+	int getModuleCnt() { return moduleCnt; }
+	Module* getModule(int i) { return modules[i]; }
 private:
 	int moduleCnt;
 	Module* modules[MAX_MODULES];

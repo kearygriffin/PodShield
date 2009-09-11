@@ -17,14 +17,16 @@
 #define TEST_MODULEA_NVRAM	1
 #define TEST_MODULEA_NVRAM_VER	1
 
-class TestModuleA: public PodModule, public IPodInterface {
+class TestModuleA: public PodModule{
 public:
 	TestModuleA();
 	virtual bool Run();
 	// PodModule
 	virtual char *getPodModuleName();
 	virtual char *getPodModuleShortName();
-	virtual int getPodModuleId() { return TEST_MODULEA_ID; }
+	virtual unsigned int getPodModuleId() { return TEST_MODULEA_ID; }
+	virtual bool isInited();
+	virtual bool isRetryingInit();
 
 
 	// IPodInterface
@@ -47,7 +49,6 @@ public:
 	virtual void getPlaylistName(int pos, char *name) ;
 
 	NVRam<int> nv;
-	int zzz;
 
 protected:
 };

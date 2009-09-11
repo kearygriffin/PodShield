@@ -9,10 +9,56 @@
 #define HEADEND_H_
 
 #include "IPodEmulator.h"
+#include "NVRam.h"
+#include "PodModule.h"
+#include "pgmspace.h"
+
+#define MAX_POD_MODS	5
+#define MAX_MENU_ITEMS	(MAX_POD_MODS+10)
+
+
+#define	IPOD_PASSTHRU_MODULE MODULE_ID('R','I')
+
+#define	PODSHIELD_PLAYLIST_NAME PSTR("PodShield")
+
+struct HeadendProperties {
+	unsigned int savedModuleId;
+};
+#define HEADEND_PROPERTIES_ID	1
+#define HEADEND_PROPERTIES_VERSION	1
+
+#define HEADEND_MODULE_ID	MODULE_ID('H', 'E')
+
+class Headend;
+
+class HeadendInitThread : public ProtoThread {
+public:
+	HeadendInitThread(Headend *head) { this->head = head; }
+	virtual bool Run();
+protected:
+	Headend *head;
+};
+
+class PodShieldMenuItem {
+public:
+	char *menuName;
+};
 
 class Headend: public IPodEmulator {
 public:
 	Headend();
+
+	virtual void initModule();
+
+	void disableHeadend();
+	void enableHeadend();
+
+	PodModule *getCurrentModule() { return currentModule; }
+	PodModule *getPodModule(int x) { return podMods[x]; }
+	int getPodModCount() { return podModCnt; }
+
+	void setCurrentModule(PodModule *m);
+
 	// ipod emulation functions
 	virtual int getPlaylistSongCount(int playlist) ;
 	virtual int getCurrentPlaylistPosition() ;
@@ -32,6 +78,30 @@ public:
 	virtual void setPlaylist(int playlist) ;
 	virtual void getPlaylistName(int pos, char *name) ;
 
+
+protected:
+	void setupHardware();
+	int getCustomPlaylistPos();
+	int getAdditionalPlaylistCount();
+	void getCustomPlaylistName(int pos);
+	void getCustomPlaylistName(int pos, char *name);
+	void getCustomPlaylistSongTitle(int playlist, int tracknum, char *title);
+	int getCustomPlaylistSongCount();
+
+
+	PodModule *currentModule;
+	PodModule *podMods[MAX_POD_MODS];
+	int podModCnt;
+
+	NVRam<struct HeadendProperties> headendProperties;
+	struct HeadendProperties props;
+	HeadendInitThread initThread;
+
+	int customPlaylist;
+	int customPlaylistPos;
+
+	PodShieldMenuItem menuItems[MAX_MENU_ITEMS];
+	int menuItemCnt;
 };
 
 #endif /* HEADEND_H_ */

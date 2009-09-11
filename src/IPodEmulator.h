@@ -54,10 +54,13 @@ public:
 	virtual bool Run();
 	void iap_reset();
 	void iap_notify();
+	void setIPodEnabled(bool e) { isEnabled = e; }
+	bool ipodEnabled() { return isEnabled; }
 protected:
 	int getVirtualCurrentPlaylistPosition(bool change);
 
 
+	bool isEnabled;
 	bool isFakePosition;
 	int nochangeTicks;
 	bool changedChannel;

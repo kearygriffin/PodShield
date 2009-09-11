@@ -40,11 +40,14 @@ bool RunnableManager::runOnce() {
 	 hasRunnables = false;
 	 for (int i=0;i<MAX_RUNNABLES;i++) {
 		 if (runList[i] != 0) {
-			 if (runList[i]->isRunning()) {
+			 bool res = false;
+			 if (res = runList[i]->isRunning()) {
 				hasRunnables= true;
-				if (!runList[i]->isSuspended())
-				runList[i]->Run();
-			 } else if (runList[i]->autoRemove()) {
+				if (!runList[i]->isSuspended()) {
+					res = runList[i]->Run();
+				}
+			 }
+			 if (!res && runList[i]->autoRemove()) {
 				 runList[i] = 0;
 			 }
 		 }

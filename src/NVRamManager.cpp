@@ -93,6 +93,8 @@ long NVRamManager::_allocate(MemoryInterface *m, int siz, unsigned int modSig, i
 			// We found the free stuff, but it's not big enough...
 			break;
 		}
+		int blkSize = m->read(pos+4) + (m->read(pos+5) << 8);
+		pos += (blkSize + MEMBLK_HEADER_SIZE);
 	}
 	return -1;
 }

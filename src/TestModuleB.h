@@ -14,14 +14,16 @@
 #define TEST_MODULEB_ID	MODULE_ID('T', 'B')
 
 
-class TestModuleB: public PodModule, public IPodInterface {
+class TestModuleB: public PodModule {
 public:
 	TestModuleB();
 	virtual bool Run();
 	// PodModule
 	virtual char *getPodModuleName();
 	virtual char *getPodModuleShortName();
-	virtual int getPodModuleId() { return TEST_MODULEB_ID; }
+	virtual unsigned int getPodModuleId() { return TEST_MODULEB_ID; }
+	virtual bool isInited();
+	virtual bool isRetryingInit();
 
 
 	// IPodInterface

@@ -1,3 +1,0 @@
-#!/bin/bash
-/home/keary/bin/usb-reset.pl
-/usr/bin/avrdude $@
